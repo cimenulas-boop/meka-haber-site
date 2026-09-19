@@ -103,6 +103,14 @@ main{max-width:1200px;margin:0 auto;padding:20px 16px 40px}
 .bolum-baslik{font-family:Georgia,"Times New Roman",serif;font-size:22px;font-weight:800;letter-spacing:1px;margin:8px 0 16px;padding-left:12px;border-left:5px solid var(--accent);display:flex;align-items:center;gap:10px}
 .bolum-baslik::after{content:"";flex:1;height:1px;background:var(--card-border)}
 
+.sektor-bolum{margin-bottom:28px}
+.sektor-ust{display:flex;align-items:center;gap:12px}
+.sektor-ust .bolum-baslik{flex:1;min-width:0;border-left-color:var(--rozet-bg)}
+.sektor-ust .bolum-baslik .sektor-alt{font-weight:600;font-size:15px;letter-spacing:.3px;color:var(--muted);font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.tumunu-gor{margin:8px 0 16px;flex-shrink:0;background:var(--chip-bg);border:1px solid var(--rozet-bg);color:var(--text);font-size:13px;font-weight:700;padding:6px 14px;border-radius:20px;cursor:pointer;white-space:nowrap;transition:all .2s}
+.tumunu-gor:hover{background:var(--rozet-bg);color:var(--rozet-text);border-color:#d9b000}
+.sektor-grid .kaynak-etiket{background:var(--rozet-bg);color:var(--rozet-text)}
+
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
 .kart{background:var(--surface);border:1px solid var(--card-border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column;transition:transform .2s,box-shadow .2s}
 .kart:hover{transform:translateY(-3px);box-shadow:var(--shadow-hover)}
@@ -133,7 +141,7 @@ footer{background:var(--header-bg);color:var(--header-text);margin-top:20px}
 .gizli{display:none!important}
 
 @media(max-width:900px){
-  .grid{grid-template-columns:repeat(2,1fr)}
+  .grid,.sektor-grid{grid-template-columns:repeat(2,1fr)}
   .mini-grid{grid-template-columns:repeat(2,1fr)}
   .slider{height:380px}
   .slide-yazi h2{font-size:24px}
@@ -141,8 +149,12 @@ footer{background:var(--header-bg);color:var(--header-text);margin-top:20px}
 @media(max-width:600px){
   nav{display:none}
   .marka span{font-size:21px}
-  .grid{grid-template-columns:1fr}
+  .grid,.sektor-grid{grid-template-columns:1fr}
   .mini-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .sektor-ust{gap:8px}
+  .sektor-ust .bolum-baslik{font-size:18px}
+  .sektor-ust .bolum-baslik .sektor-alt{display:none}
+  .tumunu-gor{font-size:12px;padding:5px 10px}
   .slider{height:270px}
   .slide-yazi{padding:50px 16px 16px}
   .slide-yazi h2{font-size:18px;-webkit-line-clamp:2}
@@ -192,6 +204,14 @@ footer{background:var(--header-bg);color:var(--header-text);margin-top:20px}
   <section id="mansetBolum" class="slider-bolum gizli">
     <div class="slider" id="sliderKutu"></div>
     <div class="slide-noktalar" id="sliderNoktalar"></div>
+  </section>
+
+  <section id="sektorBolum" class="sektor-bolum gizli">
+    <div class="sektor-ust">
+      <h2 class="bolum-baslik">SEKTÖRDEN <span class="sektor-alt">— Kırma-Eleme · Madencilik · Beton</span></h2>
+      <button type="button" class="tumunu-gor" id="sektorTumu">Tümünü gör →</button>
+    </div>
+    <section id="sektorGrid" class="grid sektor-grid"></section>
   </section>
 
   <div id="filtreler" class="cipler"></div>
@@ -268,8 +288,15 @@ let gridVeri = [];
 let filtreListesi = [];
 let aktifFiltre = null;
 let filtreSonuc = [];
+let sektorVeri = [];
+
+const SEKTOR_ONEK = /^sektör:\s*/i;
+const SEKTOR_FILTRE = { id: "sektor", ad: "Sektörden", ikon: "🏗️", sektor: true };
 
 const $ = id => document.getElementById(id);
+
+function sektorMu(h){ return SEKTOR_ONEK.test(String(h.kaynak || "")); }
+function kaynakKisa(k){ return String(k || "").replace(SEKTOR_ONEK, ""); }
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g,
   c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -327,14 +354,16 @@ function miniKartHtml(h){
     '<span>' + goreliZaman(zamanAl(h)) + '</span></div></div></a></article>';
 }
 
-function kartHtml(h){
+// kisaKaynak === true: "Sektör: Kırma-Eleme" -> "Kırma-Eleme" (map(kartHtml) index geçirir, o yüzden === true)
+function kartHtml(h, kisaKaynak){
+  const kaynak = kisaKaynak === true ? kaynakKisa(h.kaynak) : h.kaynak;
   return '<article class="kart belir">' +
     '<a href="' + esc(h.link) + '" target="_blank" rel="noopener">' +
     '<div class="gorsel-kutu">' + rozetHtml(h) + gorselHtml(h) + '</div></a>' +
     '<div class="kart-icerik">' +
     '<a href="' + esc(h.link) + '" target="_blank" rel="noopener"><h3>' + esc(baslikAl(h)) + '</h3></a>' +
     '<p>' + esc(ozetAl(h)) + '</p>' +
-    '<div class="kart-alt"><span class="kaynak-etiket">' + esc(h.kaynak) + '</span>' +
+    '<div class="kart-alt"><span class="kaynak-etiket">' + esc(kaynak) + '</span>' +
     '<span>' + goreliZaman(zamanAl(h)) + '</span></div></div></article>';
 }
 
@@ -402,6 +431,17 @@ function gridCiz(){
     : '<p style="color:var(--muted);grid-column:1/-1;text-align:center;padding:30px 0">Bu kaynakta gösterilecek haber yok.</p>';
 }
 
+function sektorCiz(){
+  const bolum = $("sektorBolum");
+  if(!sektorVeri.length){
+    bolum.classList.add("gizli");
+    $("sektorGrid").innerHTML = "";
+    return;
+  }
+  bolum.classList.remove("gizli");
+  $("sektorGrid").innerHTML = sektorVeri.map(h => kartHtml(h, true)).join("");
+}
+
 function tarihSirala(liste){
   return liste.slice().sort((a, b) => {
     const ta = parseTarih(zamanAl(a)), tb = parseTarih(zamanAl(b));
@@ -439,6 +479,12 @@ async function filtreleriYukle(){
 async function filtreUygula(f){
   aktifFiltre = f;
   kisiCipKur();
+  if(f.sektor){
+    // Kaynak bazlı: kelime araması yok, eldeki listeden "Sektör:" ile başlayanların hepsi
+    filtreSonuc = haberler.filter(sektorMu);
+    filtreCiz();
+    return;
+  }
   try{
     const r = await fetch("/api/haberler?ara=" + encodeURIComponent(f.kelimeler || f.ad) + "&limit=200");
     if(!r.ok) throw new Error(r.status);
@@ -457,18 +503,20 @@ function filtreCiz(){
   $("bosDurum").classList.add("gizli");
   $("ustKartlar").classList.add("gizli");
   $("mansetBolum").classList.add("gizli");
+  $("sektorBolum").classList.add("gizli");
   $("filtreler").classList.add("gizli");
   $("gridBaslik").classList.add("gizli");
   $("haberGrid").classList.remove("gizli");
+  const sektorGorunum = aktifFiltre.sektor === true;
   const bant = $("filtreBant");
   bant.classList.remove("gizli");
   bant.innerHTML =
-    '<span class="fb-ad">🔍 ' + esc(aktifFiltre.ad) + '</span>' +
+    '<span class="fb-ad">' + (aktifFiltre.ikon || "🔍") + ' ' + esc(aktifFiltre.ad) + '</span>' +
     '<span class="fb-sayi">' + filtreSonuc.length + ' haber</span>' +
     '<button class="fb-temizle" id="filtreTemizleBtn">✕ Filtreyi temizle</button>';
   $("filtreTemizleBtn").addEventListener("click", filtreTemizle);
   $("haberGrid").innerHTML = filtreSonuc.length
-    ? filtreSonuc.map(kartHtml).join("")
+    ? filtreSonuc.map(h => kartHtml(h, sektorGorunum)).join("")
     : '<div class="bos-durum" style="grid-column:1/-1;margin:0">' +
       '<div class="ikon">🔍</div>' +
       '<h2>' + esc(aktifFiltre.ad) + ' ile ilgili haber henüz yok</h2>' +
@@ -492,16 +540,25 @@ function ciz(){
   $("bosDurum").classList.toggle("gizli", !bos);
   ["ustKartlar", "filtreler", "gridBaslik", "haberGrid"].forEach(id =>
     $(id).classList.toggle("gizli", bos));
-  if(bos){ $("mansetBolum").classList.add("gizli"); clearInterval(slaytZamanlayici); return; }
+  if(bos){
+    $("mansetBolum").classList.add("gizli");
+    $("sektorBolum").classList.add("gizli");
+    clearInterval(slaytZamanlayici);
+    return;
+  }
 
   const gorselliler = haberler.filter(h => h.gorsel);
   const ust4 = gorselliler.slice(0, 4);
   sliderVeri = gorselliler.slice(4, 12);
-  const kullanilan = new Set([...ust4, ...sliderVeri].map(h => h.id));
+  // haberler zaten tarihe göre sıralı: en yeni 6 sektör haberi
+  sektorVeri = haberler.filter(sektorMu).slice(0, 6);
+  // Sektörden bölümündeki 6 haber SON HABERLER ızgarasında tekrar görünmez
+  const kullanilan = new Set([...ust4, ...sliderVeri, ...sektorVeri].map(h => h.id));
   gridVeri = haberler.filter(h => !kullanilan.has(h.id));
 
   $("ustKartlar").innerHTML = ust4.map(miniKartHtml).join("");
   sliderKur(sliderVeri);
+  sektorCiz();
   cipKur();
   gridCiz();
 }
@@ -509,7 +566,7 @@ function ciz(){
 async function yukle(){
   if(aktifFiltre) return;
   try{
-    const r = await fetch("/api/haberler?limit=120");
+    const r = await fetch("/api/haberler?limit=240");
     if(!r.ok) throw new Error(r.status);
     const veri = await r.json();
     const liste = tarihSirala(veri.haberler || []);
@@ -529,6 +586,11 @@ async function yukle(){
 (function baslat(){
   $("bugun").textContent = new Date().toLocaleDateString("tr-TR",
     { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+
+  $("sektorTumu").addEventListener("click", () => {
+    if(aktifFiltre && aktifFiltre.sektor) return;
+    filtreUygula(SEKTOR_FILTRE);
+  });
 
   yukle();
   filtreleriYukle();
